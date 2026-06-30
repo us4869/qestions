@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>お疲れ様です！</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #fff5f5;
+            color: #4a4a4a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .game-box {
+            width: 90%;
+            max-width: 480px;
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(255, 182, 193, 0.3);
+            border: 2px solid #ffe3e3;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .tag-area {
+            font-size: 13px;
+            color: #ff85a2;
+            font-weight: bold;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .text-area {
+            font-size: 18px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: pre-wrap;
+        }
+
+        /* 💡 ボタンエリアをすっきりした縦並びに固定 */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        /* 💡 各ボタンを入れる専用の「部屋」 */
+        .btn-room {
+            width: 100%;
+            min-height: 54px; /* ボタン1個分の高さを絶対キープ */
+            box-sizing: border-box;
+        }
+
+        .choice-btn {
+            background-color: #ffccd5;
+            color: #c94a65;
+            border: none;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
+            display: block;
+        }
+
+        .choice-btn:hover {
+            background-color: #ffb3c1;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            border: 2px solid #ffccd5;
+            font-size: 16px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            outline: none;
+            background-color: #fffafb;
+            color: #4a4a4a;
+        }
+        .text-input:focus {
+            border-color: #ff85a2;
+        }
+
+        /* 💡 暴走モード：触れた瞬間に画面全体（fixed）へ飛び出す */
+        .escape-active {
+            position: fixed !important;
+            z-index: 99999 !important;
+            width: 250px !important;
+            transition: all 0.1s ease !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-box">
+        <div class="tag-area" id="tag-text">💖 WELCOME 💖</div>
+        <div class="text-area" id="main-text">読み込み中...</div>
+        <div class="btn-group" id="btn-container"></div>
+    </div>
+
+    <script>
+        const storyData = {
+            start: {
+                text: "おかえりなさい！🥰\n\nまず、今日一日どうやった？\n（なんでも自由に書いてね）",
+                inputType: "text",
+                placeholder: "めっちゃ頑張った、疲れた、など...",
+                buttonText: "彼氏に報告する ➔",
+                nextNode: "go_gacha"
+            },
+            go_gacha: {
+                text: "一日お疲れ様です！✨\n本当にえらい！！！\n\nがんばったゆかちゃんに、特別なガチャを用意しました。よかったらこちらのガチャを回しませんか？",
+                choices: [
+                    { text: "ガチャを回す！🎰✨", nextNode: "gacha_rolling" }
+                ]
+            },
+            gacha_rolling: {
+                text: "チュイーーーン！！！（中二病）\n\nゴロゴロ……ポンッ！\nカプセルが開きます……",
+                choices: [
+                    { text: "中身を確認する👀", nextNode: "gacha_result" }
+                ]
+            },
+            gacha_result: {
+                text: "🎉 🎉 🎉 特 賞 🎉 🎉 🎉\n\n【彼氏がなんでも1つ言うこと聞く券】\n\nおめでとうございます！日頃の感謝を込めて、超レアチケットを贈呈します！✨",
+                choices: [
+                    { text: "このチケットを使用する", nextNode: "hidden_error" },
+                    { text: "かっこいい」って言う", nextNode: "cool_route" }
+                ]
+            },
+            cool_route: {
+                text: "やっぱり？？？\nありがとう！！！\n\n会いに行くよ\n今日もお疲れ様、ゆっくり休んでね！🥰",
+                choices: [
+                    { text: "最初からやり直す", nextNode: "start" }
+                ]
+            },
+            hidden_error: {
+                text: "あれ！？ボタン押せた！？！？\nそれはシステムのバグです。もう一度やり直してください。笑",
+                choices: [
+                    { text: "もう一度引く", nextNode: "start" }
+                ]
+            }
+        };
+
+        function updatePage(nodeKey) {
+            const currentNode = storyData[nodeKey];
+            const textElement = document.getElementById('main-text');
+            const btnContainer = document.getElementById('btn-container');
+
+            textElement.innerText = currentNode.text;
+            btnContainer.innerHTML = '';
+
+            if (currentNode.inputType === "text") {
+                const inputField = document.createElement('input');
+                inputField.type = 'text';
+                inputField.className = 'text-input';
+                inputField.placeholder = currentNode.placeholder;
+
+                const submitBtn = document.createElement('button');
+                submitBtn.className = 'choice-btn';
+                submitBtn.innerText = currentNode.buttonText;
+                
+                submitBtn.onclick = () => {
+                    if (inputField.value.trim() === "") {
+                        alert("何か入力してね！🥺");
+                        return;
+                    }
+                    updatePage(currentNode.nextNode);
+                };
+
+                btnContainer.appendChild(inputField);
+                btnContainer.appendChild(submitBtn);
+
+            } else {
+                currentNode.choices.forEach(choice => {
+                    // ボタン専用の部屋を作って重なりを完全に防ぐ
+                    const room = document.createElement('div');
+                    room.className = 'btn-room';
+
+                    const button = document.createElement('button');
+                    button.className = 'choice-btn';
+                    button.innerText = choice.text;
+
+                    if (choice.text.includes("使用する")) {
+                        const escapeAction = (e) => {
+                            e.preventDefault(); 
+                            
+                            if (!button.classList.contains('escape-active')) {
+                                button.classList.add('escape-active');
+                            }
+                            
+                            // 画面全体に大暴走ワープ（15%〜80%の範囲）
+                            const randomX = Math.floor(Math.random() * 65) + 15;
+                            const randomY = Math.floor(Math.random() * 65) + 15;
+                            
+                            button.style.left = randomX + '%';
+                            button.style.top = randomY + '%';
+                        };
+
+                        button.addEventListener('mouseover', escapeAction);
+                        button.addEventListener('touchstart', escapeAction);
+
+                    } else {
+                        button.onclick = () => {
+                            updatePage(choice.nextNode);
+                        };
+                    }
+
+                    room.appendChild(button);
+                    btnContainer.appendChild(room);
+                });
+            }
+        }
+
+        updatePage('start');
+    </script>
+</body>
+</html>
